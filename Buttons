@@ -1,0 +1,55 @@
+#define dirPin 2
+#define stepPin 3
+#define motorPin1 8
+#define motorPin2 9
+#define buttonCW 4
+#define buttonCCW 5
+#define switchPin 7
+
+int dcMotorSpeed = 128; /
+bool isDCMotorSpinning = false;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(dirPin, OUTPUT);
+  pinMode(stepPin, OUTPUT);
+  pinMode(motorPin1, OUTPUT);
+  pinMode(motorPin2, OUTPUT);
+  pinMode(buttonCW, INPUT_PULLUP);
+  pinMode(buttonCCW, INPUT_PULLUP);
+  pinMode(switchPin, INPUT_PULLUP);
+
+}
+
+void loop() {
+  
+  bool currentDCMotorState = digitalRead(switchPin) == LOW;
+  if (currentDCMotorState != isDCMotorSpinning) {
+    isDCMotorSpinning = currentDCMotorState;
+    if (isDCMotorSpinning) {
+      analogWrite(motorPin1, dcMotorSpeed);
+      digitalWrite(motorPin2, LOW);
+      Serial.println("DC motor O”N);
+    } else {
+      digitalWrite(motorPin1, LOW);
+      digitalWrite(motorPin2, LOW);
+      Serial.println("DC motor OFF”);
+    }
+  }
+
+
+  if (digitalRead(buttonCW) == LOW) {
+    digitalWrite(dirPin, HIGH);
+    stepMotor();
+  } else if (digitalRead(buttonCCW) == LOW) {
+    digitalWrite(dirPin, LOW);
+    stepMotor();
+  }
+}
+
+void stepMotor() {
+  digitalWrite(stepPin, HIGH);
+  delayMicroseconds(100);
+  digitalWrite(stepPin, LOW);
+  delayMicroseconds(100); 
+}
