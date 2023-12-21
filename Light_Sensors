@@ -1,0 +1,172 @@
+const int sensor1b = A0;
+const int sensor2b = A1;
+const int sensor3a = A2;
+const int sensor1a = A3;
+const int sensor2a = A4;
+const int sensor3b = A5;
+
+
+const int motorPin1 = 9;
+const int motorPin2 = 10;
+const int toggleSwitchPin = 7; // remains on once pressed
+
+
+const int motorSpeed = 120;
+
+
+bool isMotorRunning = false;
+bool lastToggleState = HIGH;
+bool dcMotorAligned = false;
+
+
+#define dirPin 2
+#define stepPin 3
+
+
+void setup() {
+ Serial.begin(9600);
+
+
+ pinMode(sensor1a, INPUT);
+ pinMode(sensor2a, INPUT);
+ pinMode(sensor3a, INPUT);
+ pinMode(sensor1b, INPUT);
+ pinMode(sensor2b, INPUT);
+ pinMode(sensor3b, INPUT);
+ pinMode(motorPin1, OUTPUT);
+ pinMode(motorPin2, OUTPUT);
+ pinMode(toggleSwitchPin, INPUT_PULLUP);
+
+
+ pinMode(stepPin, OUTPUT);
+ pinMode(dirPin, OUTPUT);
+
+
+ digitalWrite(dirPin, HIGH); 
+ lastToggleState = digitalRead(toggleSwitchPin);
+}
+
+
+void loop() {
+ bool currentToggleState = digitalRead(toggleSwitchPin);
+
+
+ if (currentToggleState != lastToggleState) {
+   delay(5000); 
+   currentToggleState = digitalRead(toggleSwitchPin);
+ }
+
+
+ if (currentToggleState == LOW && !isMotorRunning) {
+   isMotorRunning = true;
+   dcMotorAligned = false; // Reset DC motor alignment 
+   Serial.println("Toggle ON - Motor ON");
+ } else if (currentToggleState == HIGH && isMotorRunning) {
+   isMotorRunning = false;
+   dcMotorAligned = false; // Reset DC motor alignment 
+   Serial.println("Toggle OFF - Motor OFF");
+   stopMotor();
+ }
+
+
+ if (isMotorRunning) {
+   if (!dcMotorAligned) {
+     alignDCMotor();
+   } else {
+     checkStepperMotor();
+     checkSensor2b3b();
+   }
+ }
+
+
+ lastToggleState = currentToggleState;
+}
+
+
+void alignDCMotor() {
+ int value1a = analogRead(sensor1a);
+ int value1b = analogRead(sensor1b);
+
+
+ Serial.print("Sensor 1a: ");
+ Serial.print(value1a);
+ Serial.print(" | Sensor 1b: ");
+ Serial.println(value1b);
+
+
+ if (abs(value1a - value1b) <= 20) {
+   stopMotor();
+   dcMotorAligned = true; // Mark DC motor as aligned
+   Serial.println("Motor Stopped- Alignment complete");
+ } else {
+   analogWrite(motorPin1, motorSpeed);
+   digitalWrite(motorPin2, LOW);
+ }
+}
+
+
+void checkStepperMotor() {
+ bool sensorsInRange = false;
+
+
+ while (!sensorsInRange) {
+   int sensor2aValue = analogRead(sensor2a);
+   int sensor3aValue = analogRead(sensor3a);
+
+
+   Serial.print("Sensor 2a: ");
+   Serial.print(sensor2aValue);
+   Serial.print(", Sensor 3a: ");
+   Serial.println(sensor3aValue);
+
+
+   if (abs(sensor2aValue - sensor3aValue) <= 20) {
+     Serial.println("Sensor 2a and 3a are within range.");
+     stopMotor();
+     delay(40000);
+     sensorsInRange = true;
+   } else {
+     Serial.println("Sensor 2a and 3a are not within range");
+     stepMotor(motorSpeed);
+     delay(1000);
+   }
+ }
+}
+void checkSensor2b3b() {
+ bool sensorsInRange = false;
+
+
+ while (!sensorsInRange) {
+   int sensor2bValue = analogRead(sensor2b);
+   int sensor3bValue = analogRead(sensor3b);
+
+
+   Serial.print("Sensor 2b: ");
+   Serial.print(sensor2bValue);
+   Serial.print(", Sensor 3b: ");
+   Serial.println(sensor3bValue);
+
+
+   if (abs(sensor2bValue - sensor3bValue) <= 20) {
+     Serial.println("Sensor 2b and 3b are within range.");
+     sensorsInRange = true;
+   } else {
+     Serial.println("Sensor 2b and 3b are not within range");
+     stepMotor(motorSpeed);
+     delay(1000);
+   }
+ }
+}
+
+
+void stepMotor(int speed) {
+ digitalWrite(stepPin, HIGH);
+ delayMicroseconds(speed);
+ digitalWrite(stepPin, LOW);
+ delayMicroseconds(speed);
+}
+
+
+void stopMotor() {
+ digitalWrite(motorPin1, LOW);
+ digitalWrite(motorPin2, LOW);
